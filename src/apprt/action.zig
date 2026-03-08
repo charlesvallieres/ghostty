@@ -343,6 +343,10 @@ pub const Action = union(Key) {
     /// otherwise the terminal-set title.
     copy_title_to_clipboard,
 
+    /// Open a popup terminal running a specified command over the
+    /// target surface's window. The popup auto-closes when the command exits.
+    popup_terminal: PopupTerminal,
+
     /// Sync with: ghostty_action_tag_e
     pub const Key = enum(c_int) {
         quit,
@@ -410,6 +414,7 @@ pub const Action = union(Key) {
         search_selected,
         readonly,
         copy_title_to_clipboard,
+        popup_terminal,
 
         test "ghostty.h Action.Key" {
             try lib.checkGhosttyHEnum(Key, "GHOSTTY_ACTION_");
@@ -998,6 +1003,33 @@ pub const SearchSelected = struct {
     pub fn cval(self: SearchSelected) C {
         return .{
             .selected = if (self.selected) |s| @intCast(s) else -1,
+        };
+    }
+};
+
+// Sync with: ghostty_action_popup_terminal_s
+pub const PopupTerminal = struct {
+    command: [:0]const u8,
+    x: u8 = 10,
+    y: u8 = 10,
+    width: u8 = 80,
+    height: u8 = 80,
+
+    pub const C = extern struct {
+        command: [*:0]const u8,
+        x: u8 = 10,
+        y: u8 = 10,
+        width: u8 = 80,
+        height: u8 = 80,
+    };
+
+    pub fn cval(self: PopupTerminal) C {
+        return .{
+            .command = self.command.ptr,
+            .x = self.x,
+            .y = self.y,
+            .width = self.width,
+            .height = self.height,
         };
     }
 };
