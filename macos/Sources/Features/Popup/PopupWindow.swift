@@ -1,6 +1,6 @@
 import Cocoa
 
-class PopupTerminalWindow: NSPanel {
+class PopupWindow: NSPanel {
     override var canBecomeKey: Bool { return true }
     override var canBecomeMain: Bool { return true }
 
@@ -12,7 +12,7 @@ class PopupTerminalWindow: NSPanel {
             defer: false
         )
 
-        self.identifier = .init(rawValue: "com.mitchellh.ghostty.popupTerminal")
+        self.identifier = .init(rawValue: "com.mitchellh.ghostty.popup")
         self.setAccessibilitySubrole(.floatingWindow)
         self.isOpaque = false
         self.backgroundColor = .clear

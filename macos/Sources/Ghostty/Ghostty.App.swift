@@ -1612,7 +1612,7 @@ extension Ghostty {
             // Close existing popup before opening a new one
             tc.popupController?.closePopup()
 
-            let controller = PopupTerminalController(
+            let controller = PopupController(
                 appDelegate.ghostty,
                 parentWindow: window,
                 command: command,
