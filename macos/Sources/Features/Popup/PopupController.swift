@@ -75,13 +75,6 @@ class PopupController: BaseTerminalController {
         // Observe parent window changes
         let center = NotificationCenter.default
         parentObservers.append(center.addObserver(
-            forName: NSWindow.didMoveNotification,
-            object: parentWindow,
-            queue: .main
-        ) { [weak self] _ in
-            self?.repositionToParent()
-        })
-        parentObservers.append(center.addObserver(
             forName: NSWindow.didResizeNotification,
             object: parentWindow,
             queue: .main
@@ -96,8 +89,9 @@ class PopupController: BaseTerminalController {
             self?.closePopup()
         })
 
-        // Show the popup above the parent window (not above all OS windows)
-        panel.order(.above, relativeTo: parentWindow.windowNumber)
+        // Attach the popup as a child window so macOS keeps it above
+        // the parent at all times and moves it together with the parent.
+        parentWindow.addChildWindow(panel, ordered: .above)
         panel.makeKey()
         panel.makeFirstResponder(view)
     }
@@ -162,6 +156,11 @@ class PopupController: BaseTerminalController {
     }
 
     func closePopup() {
+        // Detach from parent before closing to cleanly break the
+        // child-window relationship.
+        if let window = window, let parentWindow = parentWindow {
+            parentWindow.removeChildWindow(window)
+        }
         window?.close()
 
         // Clear the reference on the parent's terminal controller
