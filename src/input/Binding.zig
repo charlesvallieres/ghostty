@@ -935,19 +935,55 @@ pub const Action = union(enum) {
     crash: CrashThread,
 
     /// Open a popup terminal running a specific command over the current
-    /// window. The popup auto-closes when the command exits.
+    /// window. The popup auto-closes when the command exits. This is
+    /// similar to tmux's `display-popup` command.
     ///
-    /// The parameter format is: `command[,x,y,width,height]` where
-    /// x/y/width/height are percentages (0-100) specifying the popup
-    /// geometry relative to the parent window. Defaults: `10,10,80,80`.
+    /// The popup terminal is a floating panel that appears over the
+    /// focused window. It runs the specified command in the user's login
+    /// shell (so PATH and other environment variables are available).
+    /// When the command exits, the popup automatically closes. Only one
+    /// popup can be open per window; opening a new popup closes any
+    /// existing one.
+    ///
+    /// The parameter format is: `command[,width,height[,x,y]]` where
+    /// all values are percentages (0-100) of the parent window.
+    ///
+    ///   - If only `width,height` are specified, the popup is centered.
+    ///
+    ///   - If `width,height,x,y` are all specified, the popup is placed
+    ///     at the given position.
+    ///
+    ///   - If no geometry is specified, the popup defaults to 80x80
+    ///     centered (equivalent to `80,80`).
+    ///
+    /// Commands may contain spaces. The parser identifies geometry by
+    /// checking whether the last two or four comma-separated values are
+    /// all valid integers in the range 0-100. If they are, they are
+    /// treated as geometry; otherwise the entire parameter is the command.
     ///
     /// Examples:
     ///
     /// ```ini
     /// keybind = ctrl+g=popup_terminal:lazygit
-    /// keybind = ctrl+g=popup_terminal:lazygit,10,10,80,80
-    /// keybind = ctrl+g=popup_terminal:tv files,5,5,90,90
+    /// keybind = ctrl+g=popup_terminal:lazygit,60,60
+    /// keybind = ctrl+g=popup_terminal:lazygit,80,80,10,10
+    /// keybind = ctrl+g=popup_terminal:tv files,90,90
     /// ```
+    ///
+    /// The popup terminal can also be added to the command palette:
+    ///
+    /// ```ini
+    /// command-palette-entry = title:Lazygit,action:popup_terminal:lazygit
+    /// ```
+    ///
+    /// The popup has the following characteristics:
+    ///
+    ///   - The popup follows the parent window when it is moved or resized.
+    ///
+    ///   - Closing the parent window also closes the popup.
+    ///
+    ///   - The popup appears above the parent window but not above other
+    ///     application windows.
     ///
     /// Only implemented on macOS.
     popup_terminal: PopupTerminal,
@@ -986,10 +1022,13 @@ pub const Action = union(enum) {
         }
 
         pub fn parse(param: []const u8) !PopupTerminal {
-            // Try to find the last 4 comma-separated segments and check
-            // if they are all valid geometry values (0-100). If so, treat
-            // everything before them as the command. Otherwise, the
-            // entire param is the command.
+            // Find trailing comma-separated segments (up to 4) and check
+            // if they are valid geometry values (0-100).
+            //
+            // Supported formats:
+            //   command                      → defaults (80x80, centered)
+            //   command,width,height          → centered at given size
+            //   command,width,height,x,y      → explicit position and size
             var comma_positions: [4]usize = undefined;
             var comma_count: usize = 0;
             var i: usize = param.len;
@@ -1003,31 +1042,57 @@ pub const Action = union(enum) {
                 }
             }
 
-            if (comma_count == 4) {
-                // Try parsing the last 4 segments as geometry
-                const segments = [4][]const u8{
+            // Try 4 trailing segments: width,height,x,y
+            if (comma_count >= 4) {
+                const seg = [4][]const u8{
                     param[comma_positions[0] + 1 .. comma_positions[1]],
                     param[comma_positions[1] + 1 .. comma_positions[2]],
                     param[comma_positions[2] + 1 .. comma_positions[3]],
                     param[comma_positions[3] + 1 ..],
                 };
 
-                const x = std.fmt.parseInt(u8, segments[0], 10) catch null;
-                const y = std.fmt.parseInt(u8, segments[1], 10) catch null;
-                const w = std.fmt.parseInt(u8, segments[2], 10) catch null;
-                const h = std.fmt.parseInt(u8, segments[3], 10) catch null;
+                const w = std.fmt.parseInt(u8, seg[0], 10) catch null;
+                const h = std.fmt.parseInt(u8, seg[1], 10) catch null;
+                const x = std.fmt.parseInt(u8, seg[2], 10) catch null;
+                const y = std.fmt.parseInt(u8, seg[3], 10) catch null;
 
-                if (x != null and y != null and w != null and h != null and
-                    x.? <= 100 and y.? <= 100 and w.? <= 100 and h.? <= 100)
+                if (w != null and h != null and x != null and y != null and
+                    w.? > 0 and h.? > 0 and
+                    w.? <= 100 and h.? <= 100 and x.? <= 100 and y.? <= 100)
                 {
                     const cmd = param[0..comma_positions[0]];
                     if (cmd.len == 0) return Error.InvalidFormat;
                     return .{
                         .command = cmd,
-                        .x = x.?,
-                        .y = y.?,
                         .width = w.?,
                         .height = h.?,
+                        .x = x.?,
+                        .y = y.?,
+                    };
+                }
+            }
+
+            // Try 2 trailing segments: width,height (auto-center)
+            if (comma_count >= 2) {
+                const p0 = comma_positions[2]; // second-to-last comma
+                const p1 = comma_positions[3]; // last comma
+                const seg = [2][]const u8{
+                    param[p0 + 1 .. p1],
+                    param[p1 + 1 ..],
+                };
+
+                const w = std.fmt.parseInt(u8, seg[0], 10) catch null;
+                const h = std.fmt.parseInt(u8, seg[1], 10) catch null;
+
+                if (w != null and h != null and w.? > 0 and h.? > 0 and w.? <= 100 and h.? <= 100) {
+                    const cmd = param[0..p0];
+                    if (cmd.len == 0) return Error.InvalidFormat;
+                    return .{
+                        .command = cmd,
+                        .width = w.?,
+                        .height = h.?,
+                        .x = (100 - w.?) / 2,
+                        .y = (100 - h.?) / 2,
                     };
                 }
             }
@@ -1055,8 +1120,14 @@ pub const Action = union(enum) {
             writer: *std.Io.Writer,
         ) std.Io.Writer.Error!void {
             try writer.writeAll(self.command);
-            if (self.x != 10 or self.y != 10 or self.width != 80 or self.height != 80) {
-                try writer.print(",{d},{d},{d},{d}", .{ self.x, self.y, self.width, self.height });
+            const centered = self.x == (100 - self.width) / 2 and
+                self.y == (100 - self.height) / 2;
+            if (!centered) {
+                // Explicit position: emit all 4 values
+                try writer.print(",{d},{d},{d},{d}", .{ self.width, self.height, self.x, self.y });
+            } else if (self.width != 80 or self.height != 80) {
+                // Centered with non-default size: emit only width,height
+                try writer.print(",{d},{d}", .{ self.width, self.height });
             }
         }
     };
