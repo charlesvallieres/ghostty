@@ -5,7 +5,7 @@ import GhosttyKit
 
 /// Controller for a popup terminal that runs a specific command and
 /// auto-closes when the command exits. Anchored to a parent window.
-class PopupTerminalController: BaseTerminalController {
+class PopupController: BaseTerminalController {
     /// The parent window that this popup is anchored to.
     private weak var parentWindow: NSWindow?
 
@@ -50,7 +50,7 @@ class PopupTerminalController: BaseTerminalController {
 
         // Create the window programmatically
         let frame = computeFrame(in: parentWindow)
-        let panel = PopupTerminalWindow(contentRect: frame)
+        let panel = PopupWindow(contentRect: frame)
         panel.delegate = self
         self.window = panel
 

@@ -51,7 +51,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
     private var restorable: Bool = true
 
     /// The popup terminal controller, if one is currently shown.
-    var popupController: PopupTerminalController?
+    var popupController: PopupController?
 
     /// The configuration derived from the Ghostty config so we don't need to rely on references.
     private(set) var derivedConfig: DerivedConfig
