@@ -977,6 +977,14 @@ pub const Action = union(enum) {
         width: u8 = 80,
         height: u8 = 80,
 
+        /// CLI parsing entry point used by command-palette-entry config.
+        /// Allocates a copy of the command string so it outlives the input.
+        pub fn parseCLI(self: *PopupTerminal, alloc: Allocator, input: ?[]const u8) !void {
+            var result = try PopupTerminal.parse(input orelse return Error.InvalidFormat);
+            result.command = try alloc.dupe(u8, result.command);
+            self.* = result;
+        }
+
         pub fn parse(param: []const u8) !PopupTerminal {
             // Try to find the last 4 comma-separated segments and check
             // if they are all valid geometry values (0-100). If so, treat
