@@ -345,7 +345,7 @@ pub const Action = union(Key) {
 
     /// Open a popup terminal running a specified command over the
     /// target surface's window. The popup auto-closes when the command exits.
-    popup_terminal: PopupTerminal,
+    popup: Popup,
 
     /// Sync with: ghostty_action_tag_e
     pub const Key = enum(c_int) {
@@ -414,7 +414,7 @@ pub const Action = union(Key) {
         search_selected,
         readonly,
         copy_title_to_clipboard,
-        popup_terminal,
+        popup,
 
         test "ghostty.h Action.Key" {
             try lib.checkGhosttyHEnum(Key, "GHOSTTY_ACTION_");
@@ -1007,8 +1007,8 @@ pub const SearchSelected = struct {
     }
 };
 
-// Sync with: ghostty_action_popup_terminal_s
-pub const PopupTerminal = struct {
+// Sync with: ghostty_action_popup_s
+pub const Popup = struct {
     command: [:0]const u8,
     x: u8 = 10,
     y: u8 = 10,
@@ -1023,7 +1023,7 @@ pub const PopupTerminal = struct {
         height: u8 = 80,
     };
 
-    pub fn cval(self: PopupTerminal) C {
+    pub fn cval(self: Popup) C {
         return .{
             .command = self.command.ptr,
             .x = self.x,

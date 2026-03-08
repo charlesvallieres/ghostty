@@ -5915,12 +5915,12 @@ pub fn performBindingAction(self: *Surface, action: input.Binding.Action) !bool 
             .io => self.queueIo(.{ .crash = {} }, .unlocked),
         },
 
-        .popup_terminal => |popup| {
+        .popup => |popup| {
             const command_z = try self.alloc.dupeZ(u8, popup.command);
             defer self.alloc.free(command_z);
             return try self.rt_app.performAction(
                 .{ .surface = self },
-                .popup_terminal,
+                .popup,
                 .{
                     .command = command_z,
                     .x = popup.x,

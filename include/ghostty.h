@@ -855,14 +855,14 @@ typedef struct {
   uint64_t len;
 } ghostty_action_scrollbar_s;
 
-// apprt.action.PopupTerminal
+// apprt.action.Popup
 typedef struct {
   const char *command;
   uint8_t x;
   uint8_t y;
   uint8_t width;
   uint8_t height;
-} ghostty_action_popup_terminal_s;
+} ghostty_action_popup_s;
 
 // apprt.Action.Key
 typedef enum {
@@ -931,7 +931,7 @@ typedef enum {
   GHOSTTY_ACTION_SEARCH_SELECTED,
   GHOSTTY_ACTION_READONLY,
   GHOSTTY_ACTION_COPY_TITLE_TO_CLIPBOARD,
-  GHOSTTY_ACTION_POPUP_TERMINAL,
+  GHOSTTY_ACTION_POPUP,
 } ghostty_action_tag_e;
 
 typedef union {
@@ -973,7 +973,7 @@ typedef union {
   ghostty_action_search_total_s search_total;
   ghostty_action_search_selected_s search_selected;
   ghostty_action_readonly_e readonly;
-  ghostty_action_popup_terminal_s popup_terminal;
+  ghostty_action_popup_s popup;
 } ghostty_action_u;
 
 typedef struct {

@@ -964,16 +964,16 @@ pub const Action = union(enum) {
     /// Examples:
     ///
     /// ```ini
-    /// keybind = ctrl+g=popup_terminal:lazygit
-    /// keybind = ctrl+g=popup_terminal:lazygit,60,60
-    /// keybind = ctrl+g=popup_terminal:lazygit,80,80,10,10
-    /// keybind = ctrl+g=popup_terminal:tv files,90,90
+    /// keybind = ctrl+g=popup:lazygit
+    /// keybind = ctrl+g=popup:lazygit,60,60
+    /// keybind = ctrl+g=popup:lazygit,80,80,10,10
+    /// keybind = ctrl+g=popup:tv files,90,90
     /// ```
     ///
     /// The popup terminal can also be added to the command palette:
     ///
     /// ```ini
-    /// command-palette-entry = title:Lazygit,action:popup_terminal:lazygit
+    /// command-palette-entry = title:Lazygit,action:popup:lazygit
     /// ```
     ///
     /// The popup has the following characteristics:
@@ -986,7 +986,7 @@ pub const Action = union(enum) {
     ///     application windows.
     ///
     /// Only implemented on macOS.
-    popup_terminal: PopupTerminal,
+    popup: Popup,
 
     pub const Key = @typeInfo(Action).@"union".tag_type.?;
 
@@ -1006,7 +1006,7 @@ pub const Action = union(enum) {
         render,
     };
 
-    pub const PopupTerminal = struct {
+    pub const Popup = struct {
         command: []const u8,
         x: u8 = 10,
         y: u8 = 10,
@@ -1015,13 +1015,13 @@ pub const Action = union(enum) {
 
         /// CLI parsing entry point used by command-palette-entry config.
         /// Allocates a copy of the command string so it outlives the input.
-        pub fn parseCLI(self: *PopupTerminal, alloc: Allocator, input: ?[]const u8) !void {
-            var result = try PopupTerminal.parse(input orelse return Error.InvalidFormat);
+        pub fn parseCLI(self: *Popup, alloc: Allocator, input: ?[]const u8) !void {
+            var result = try Popup.parse(input orelse return Error.InvalidFormat);
             result.command = try alloc.dupe(u8, result.command);
             self.* = result;
         }
 
-        pub fn parse(param: []const u8) !PopupTerminal {
+        pub fn parse(param: []const u8) !Popup {
             // Find trailing comma-separated segments (up to 4) and check
             // if they are valid geometry values (0-100).
             //
@@ -1103,9 +1103,9 @@ pub const Action = union(enum) {
         }
 
         pub fn clone(
-            self: PopupTerminal,
+            self: Popup,
             alloc: Allocator,
-        ) Allocator.Error!PopupTerminal {
+        ) Allocator.Error!Popup {
             return .{
                 .command = try alloc.dupe(u8, self.command),
                 .x = self.x,
@@ -1116,7 +1116,7 @@ pub const Action = union(enum) {
         }
 
         pub fn format(
-            self: PopupTerminal,
+            self: Popup,
             writer: *std.Io.Writer,
         ) std.Io.Writer.Error!void {
             try writer.writeAll(self.command);
@@ -1550,7 +1550,7 @@ pub const Action = union(enum) {
             .deactivate_all_key_tables,
             .end_key_sequence,
             .crash,
-            .popup_terminal,
+            .popup,
             => .surface,
 
             // These are less obvious surface actions. They're surface
