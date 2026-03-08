@@ -5915,6 +5915,22 @@ pub fn performBindingAction(self: *Surface, action: input.Binding.Action) !bool 
             .io => self.queueIo(.{ .crash = {} }, .unlocked),
         },
 
+        .popup_terminal => |popup| {
+            const command_z = try self.alloc.dupeZ(u8, popup.command);
+            defer self.alloc.free(command_z);
+            return try self.rt_app.performAction(
+                .{ .surface = self },
+                .popup_terminal,
+                .{
+                    .command = command_z,
+                    .x = popup.x,
+                    .y = popup.y,
+                    .width = popup.width,
+                    .height = popup.height,
+                },
+            );
+        },
+
         .adjust_selection => |direction| {
             self.renderer_state.mutex.lock();
             defer self.renderer_state.mutex.unlock();

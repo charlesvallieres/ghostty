@@ -666,6 +666,8 @@ extension Ghostty {
                 return false
             case GHOSTTY_ACTION_COPY_TITLE_TO_CLIPBOARD:
                 return copyTitleToClipboard(app, target: target)
+            case GHOSTTY_ACTION_POPUP_TERMINAL:
+                popupTerminal(app, target: target, popup: action.action.popup_terminal)
             default:
                 Ghostty.logger.warning("unknown action action=\(action.tag.rawValue)")
                 return false
@@ -1583,6 +1585,38 @@ extension Ghostty {
         ) {
             guard let appDelegate = NSApplication.shared.delegate as? AppDelegate else { return }
             appDelegate.toggleQuickTerminal(self)
+        }
+
+        private static func popupTerminal(
+            _ app: ghostty_app_t,
+            target: ghostty_target_s,
+            popup: ghostty_action_popup_terminal_s
+        ) {
+            guard target.tag == GHOSTTY_TARGET_SURFACE else {
+                Ghostty.logger.warning("popup_terminal requires a surface target")
+                return
+            }
+
+            guard let surfaceView = surfaceView(from: target.target.surface) else { return }
+            guard let window = surfaceView.window else { return }
+            guard let tc = window.windowController as? TerminalController else { return }
+            guard let appDelegate = NSApplication.shared.delegate as? AppDelegate else { return }
+
+            let command = String(cString: popup.command)
+
+            // Close existing popup before opening a new one
+            tc.popupController?.closePopup()
+
+            let controller = PopupTerminalController(
+                appDelegate.ghostty,
+                parentWindow: window,
+                command: command,
+                x: popup.x,
+                y: popup.y,
+                width: popup.width,
+                height: popup.height
+            )
+            tc.popupController = controller
         }
 
         private static func setTitle(

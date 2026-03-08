@@ -934,6 +934,24 @@ pub const Action = union(enum) {
     ///
     crash: CrashThread,
 
+    /// Open a popup terminal running a specific command over the current
+    /// window. The popup auto-closes when the command exits.
+    ///
+    /// The parameter format is: `command[,x,y,width,height]` where
+    /// x/y/width/height are percentages (0-100) specifying the popup
+    /// geometry relative to the parent window. Defaults: `10,10,80,80`.
+    ///
+    /// Examples:
+    ///
+    /// ```ini
+    /// keybind = ctrl+g=popup_terminal:lazygit
+    /// keybind = ctrl+g=popup_terminal:lazygit,10,10,80,80
+    /// keybind = ctrl+g=popup_terminal:tv files,5,5,90,90
+    /// ```
+    ///
+    /// Only implemented on macOS.
+    popup_terminal: PopupTerminal,
+
     pub const Key = @typeInfo(Action).@"union".tag_type.?;
 
     /// Make this a valid gobject if we're in a GTK environment.
@@ -950,6 +968,89 @@ pub const Action = union(enum) {
         main,
         io,
         render,
+    };
+
+    pub const PopupTerminal = struct {
+        command: []const u8,
+        x: u8 = 10,
+        y: u8 = 10,
+        width: u8 = 80,
+        height: u8 = 80,
+
+        pub fn parse(param: []const u8) !PopupTerminal {
+            // Try to find the last 4 comma-separated segments and check
+            // if they are all valid geometry values (0-100). If so, treat
+            // everything before them as the command. Otherwise, the
+            // entire param is the command.
+            var comma_positions: [4]usize = undefined;
+            var comma_count: usize = 0;
+            var i: usize = param.len;
+            while (i > 0) {
+                i -= 1;
+                if (param[i] == ',') {
+                    if (comma_count < 4) {
+                        comma_positions[3 - comma_count] = i;
+                        comma_count += 1;
+                    } else break;
+                }
+            }
+
+            if (comma_count == 4) {
+                // Try parsing the last 4 segments as geometry
+                const segments = [4][]const u8{
+                    param[comma_positions[0] + 1 .. comma_positions[1]],
+                    param[comma_positions[1] + 1 .. comma_positions[2]],
+                    param[comma_positions[2] + 1 .. comma_positions[3]],
+                    param[comma_positions[3] + 1 ..],
+                };
+
+                const x = std.fmt.parseInt(u8, segments[0], 10) catch null;
+                const y = std.fmt.parseInt(u8, segments[1], 10) catch null;
+                const w = std.fmt.parseInt(u8, segments[2], 10) catch null;
+                const h = std.fmt.parseInt(u8, segments[3], 10) catch null;
+
+                if (x != null and y != null and w != null and h != null and
+                    x.? <= 100 and y.? <= 100 and w.? <= 100 and h.? <= 100)
+                {
+                    const cmd = param[0..comma_positions[0]];
+                    if (cmd.len == 0) return Error.InvalidFormat;
+                    return .{
+                        .command = cmd,
+                        .x = x.?,
+                        .y = y.?,
+                        .width = w.?,
+                        .height = h.?,
+                    };
+                }
+            }
+
+            // No valid geometry found, entire param is the command
+            if (param.len == 0) return Error.InvalidFormat;
+            return .{ .command = param };
+        }
+
+        pub fn clone(
+            self: PopupTerminal,
+            alloc: Allocator,
+        ) Allocator.Error!PopupTerminal {
+            return .{
+                .command = try alloc.dupe(u8, self.command),
+                .x = self.x,
+                .y = self.y,
+                .width = self.width,
+                .height = self.height,
+            };
+        }
+
+        pub fn format(
+            self: PopupTerminal,
+            writer: *std.Io.Writer,
+        ) std.Io.Writer.Error!void {
+            try writer.writeAll(self.command);
+            if (self.x != 10 or self.y != 10 or self.width != 80 or self.height != 80) {
+                try writer.print(",{d},{d},{d},{d}", .{ self.x, self.y, self.width, self.height });
+            }
+        }
     };
 
     pub const CursorKey = struct {
@@ -1370,6 +1471,7 @@ pub const Action = union(enum) {
             .deactivate_all_key_tables,
             .end_key_sequence,
             .crash,
+            .popup_terminal,
             => .surface,
 
             // These are less obvious surface actions. They're surface

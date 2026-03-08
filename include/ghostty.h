@@ -449,6 +449,7 @@ typedef struct {
   size_t env_var_count;
   const char* initial_input;
   bool wait_after_command;
+  bool command_no_wait;
   ghostty_surface_context_e context;
 } ghostty_surface_config_s;
 
@@ -854,6 +855,15 @@ typedef struct {
   uint64_t len;
 } ghostty_action_scrollbar_s;
 
+// apprt.action.PopupTerminal
+typedef struct {
+  const char *command;
+  uint8_t x;
+  uint8_t y;
+  uint8_t width;
+  uint8_t height;
+} ghostty_action_popup_terminal_s;
+
 // apprt.Action.Key
 typedef enum {
   GHOSTTY_ACTION_QUIT,
@@ -921,6 +931,7 @@ typedef enum {
   GHOSTTY_ACTION_SEARCH_SELECTED,
   GHOSTTY_ACTION_READONLY,
   GHOSTTY_ACTION_COPY_TITLE_TO_CLIPBOARD,
+  GHOSTTY_ACTION_POPUP_TERMINAL,
 } ghostty_action_tag_e;
 
 typedef union {
@@ -962,6 +973,7 @@ typedef union {
   ghostty_action_search_total_s search_total;
   ghostty_action_search_selected_s search_selected;
   ghostty_action_readonly_e readonly;
+  ghostty_action_popup_terminal_s popup_terminal;
 } ghostty_action_u;
 
 typedef struct {

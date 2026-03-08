@@ -659,6 +659,9 @@ extension Ghostty {
         /// Wait after the command
         var waitAfterCommand: Bool = false
 
+        /// When true, overrides the default wait-after-command for command surfaces
+        var commandNoWait: Bool = false
+
         /// Context for surface creation
         var context: ghostty_surface_context_e = GHOSTTY_SURFACE_CONTEXT_WINDOW
 
@@ -716,6 +719,7 @@ extension Ghostty {
 
             // Set wait after command
             config.wait_after_command = waitAfterCommand
+            config.command_no_wait = commandNoWait
 
             // Set context
             config.context = context

@@ -455,8 +455,13 @@ pub const Surface = struct {
         /// Input to send to the command after it is started.
         initial_input: ?[*:0]const u8 = null,
 
-        /// Wait after the command exits
+        /// Wait after the command exits.
         wait_after_command: bool = false,
+
+        /// When true, overrides the default wait-after-command behavior
+        /// for surfaces with an explicit command (which normally wait).
+        /// Only has effect when a command is set.
+        command_no_wait: bool = false,
 
         /// Context for the new surface
         context: apprt.surface.NewSurfaceContext = .window,
@@ -526,12 +531,19 @@ pub const Surface = struct {
         }
 
         // If we have a command from the options then we set it.
+        // By default, surfaces with explicit commands wait after the
+        // command exits, but this can be overridden via command_no_wait.
         if (opts.command) |c_command| {
             const cmd = std.mem.sliceTo(c_command, 0);
             if (cmd.len > 0) {
                 config.command = .{ .shell = cmd };
-                config.@"wait-after-command" = true;
+                config.@"wait-after-command" = !opts.command_no_wait;
             }
+        }
+
+        // Wait after command (explicit override, independent of command)
+        if (opts.wait_after_command) {
+            config.@"wait-after-command" = true;
         }
 
         // Apply any environment variables that were requested.
@@ -566,11 +578,6 @@ pub const Surface = struct {
                 alloc,
                 .{ .raw = try buf.toOwnedSliceSentinel(0) },
             );
-        }
-
-        // Wait after command
-        if (opts.wait_after_command) {
-            config.@"wait-after-command" = true;
         }
 
         // Initialize our surface right away. We're given a view that is
