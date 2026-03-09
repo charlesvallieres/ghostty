@@ -63,7 +63,7 @@ class PopupController: BaseTerminalController {
         if let contentView = panel.contentView {
             contentView.wantsLayer = true
             contentView.layer?.borderWidth = 1.0
-            contentView.layer?.borderColor = NSColor.gray.withAlphaComponent(0.5).cgColor
+            contentView.layer?.borderColor = NSColor(ghostty.config.splitDividerColor).cgColor
         }
 
         // Create the terminal surface
